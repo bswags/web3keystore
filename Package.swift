@@ -5,6 +5,10 @@ import PackageDescription
 
 let package = Package(
     name: "web3keystore",
+    platforms: [
+        .iOS(.v11),
+        .macOS(.v10_12)
+    ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
@@ -13,14 +17,17 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-        // .package(url: /* package url */, from: "1.0.0"),
+        .package(name: "BigInt", url: "https://github.com/attaswift/BigInt", from: "5.0.0"),
+        .package(name: "secp256k1", url: "https://github.com/Boilertalk/secp256k1.swift", from: "0.1.0"),
+        .package(name: "CryptoSwift", url: "https://github.com/krzyzanowskim/CryptoSwift.git", from: "1.4.2")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
+        .target(name: "libscrypt"),
         .target(
             name: "web3keystore",
-            dependencies: []),
+            dependencies: ["BigInt", "CryptoSwift", "libscrypt", "secp256k1"]),
         .testTarget(
             name: "web3keystoreTests",
             dependencies: ["web3keystore"]),
