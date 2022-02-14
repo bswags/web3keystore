@@ -120,7 +120,6 @@ public class BIP39 {
         guard wordList.count >= 12 && wordList.count.isMultiple(of: 3) && wordList.count <= 24 else {return nil}
         var bitString = ""
         for word in wordList {
-//            let idx = language.words.index(of: word)
             let idx = language.words.firstIndex(of: word)
             if (idx == nil) {
                 return nil
@@ -146,15 +145,14 @@ public class BIP39 {
     }
 
     static public func seedFromMmemonics(_ mnemonics: String, password: String = "", language: BIP39Language = BIP39Language.english) -> Data? {
-        let valid = BIP39.mnemonicsToEntropy(mnemonics, language: language) != nil
-        if (!valid) {
+        guard BIP39.mnemonicsToEntropy(mnemonics, language: language) != nil else {
             return nil
         }
+
         guard let mnemData = mnemonics.decomposedStringWithCompatibilityMapping.data(using: .utf8) else {return nil}
         let salt = "mnemonic" + password
         guard let saltData = salt.decomposedStringWithCompatibilityMapping.data(using: .utf8) else {return nil}
         guard let seedArray = try? PBKDF2.calculate(password: mnemData.bytes, salt: saltData.bytes, iterations: 2048, keyLength: 64, variant: .sha512) else {return nil}
-//        let seed = Data(bytes:seedArray)
         let seed = Data(seedArray)
         return seed
     }
@@ -163,6 +161,7 @@ public class BIP39 {
         guard let mnemonics = BIP39.generateMnemonicsFromEntropy(entropy: entropy, language: language) else {
             return nil
         }
+
         return BIP39.seedFromMmemonics(mnemonics, password: password, language: language)
     }
 }

@@ -15,9 +15,9 @@ public protocol AbstractKeystore {
 }
 
 public enum AbstractKeystoreError: LocalizedError {
+    case aesError
     case noEntropyError
     case keyDerivationError
-    case aesError
     case invalidAccountError
     case invalidPasswordError
     case encryptionError(String)
