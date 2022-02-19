@@ -41,6 +41,11 @@ public struct Utils {
         }
     }
 
+    /// Parses a String into Data, interpreting it as hex.
+    public static func hexToData(_ string: String) -> Data? {
+        Data.fromHex(string)
+    }
+
     /// Formats a BigInt object to String. The supplied number is first divided into integer and decimal part based on "toUnits",
     /// then limit the decimal part to "decimals" symbols and uses a "decimalSeparator" as a separator.
     ///
