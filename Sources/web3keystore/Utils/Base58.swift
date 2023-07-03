@@ -10,7 +10,7 @@ import Foundation
 struct Base58 {
     static let base58Alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
-    // Encode.
+    // Encode
     static func base58FromBytes(_ bytes: [UInt8]) -> String {
         var bytes = bytes
         var zerosCount = 0
@@ -42,7 +42,7 @@ struct Base58 {
             length = i
         }
 
-        // Skip leading zeros.
+        // skip leading zeros
         var zerosToRemove = 0
         var str = ""
         for b in base58 {
@@ -63,24 +63,29 @@ struct Base58 {
         return str
     }
 
-    // Decode.
+    // Decode
     static func bytesFromBase58(_ base58: String) -> [UInt8] {
-        // Remove leading and trailing whitespaces.
+        // remove leading and trailing whitespaces
         let string = base58.trimmingCharacters(in: CharacterSet.whitespaces)
-
         guard !string.isEmpty else { return [] }
 
-        var zerosCount = 0
-        var length = 0
+        // count leading ASCII "1"'s [decodes directly to binary zero bytes]
+        var leadingZeros = 0
         for c in string {
             if c != "1" { break }
-            zerosCount += 1
+            leadingZeros += 1
         }
 
-        let size = string.lengthOfBytes(using: String.Encoding.utf8) * 733 / 1000 + 1 - zerosCount
-        var base58: [UInt8] = Array(repeating: 0, count: size)
+        // calculate the size of the decoded output, rounded up
+        let size = (string.lengthOfBytes(using: String.Encoding.utf8) - leadingZeros) * 733 / 1000 + 1
+
+        // allocate a buffer large enough for the decoded output
+        var base58: [UInt8] = Array(repeating: 0, count: size + leadingZeros)
+
+        // decode what remains of the data
+        var length = 0
         for c in string where c != " " {
-            // Search for base58 character.
+            // search for base58 character
             guard let base58Index = base58Alphabet.firstIndex(of: c) else { return [] }
 
             var carry = base58Index.utf16Offset(in: base58Alphabet)
@@ -96,22 +101,16 @@ struct Base58 {
             length = i
         }
 
-        // Skip leading zeros.
-        var zerosToRemove = 0
-
+        // calculate how many leading zero bytes we have
+        var totalZeros = 0
         for b in base58 {
             if b != 0 { break }
-            zerosToRemove += 1
+            totalZeros += 1
         }
+        // remove the excess zero bytes
+        base58.removeFirst(totalZeros - leadingZeros)
 
-        base58.removeFirst(zerosToRemove)
-
-        var result: [UInt8] = Array(repeating: 0, count: zerosCount)
-        for b in base58 {
-            result.append(b)
-        }
-
-        return result
+        return base58
     }
 }
 
@@ -158,4 +157,5 @@ extension String {
 
         return bytes
     }
+
 }

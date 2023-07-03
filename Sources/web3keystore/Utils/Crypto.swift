@@ -6,113 +6,69 @@
 //
 
 import Foundation
-import libscrypt
+import CryptoSwift
 
-enum Scrypt {
-    enum ScryptError: Error {
-        case invalidLength
-        case invalidParameters
-        case emptySalt
-        case unknownError(code: Int32)
-    }
-
-    static func calculate(password: Array<UInt8>, salt: Array<UInt8>, dkLen: Int, N: Int, r: Int, p: Int) throws -> [UInt8] {
-        guard dkLen > 0, UInt64(dkLen) <= 137_438_953_440 else {
-            throw ScryptError.invalidLength
-        }
-        guard r > 0, p > 0, r * p < 1_073_741_824, N.isPowerOfTwo else {
-            throw ScryptError.invalidParameters
-        }
-
-        var rv = [UInt8](repeating: 0, count: dkLen)
-        var result: Int32 = -1
-
-        try rv.withUnsafeMutableBufferPointer { bufptr in
-            try password.withUnsafeBufferPointer { passwd in
-
-                try salt.withUnsafeBufferPointer { saltptr in
-                    guard !saltptr.isEmpty else {
-                        throw ScryptError.emptySalt
-                    }
-                    result = libscrypt_scrypt(
-                        passwd.baseAddress!, passwd.count,
-                        saltptr.baseAddress!, saltptr.count,
-                        UInt64(N), UInt32(r), UInt32(p),
-                        bufptr.baseAddress!, dkLen
-                    )
-                }
-            }
-        }
-
-        guard result == 0 else {
-            throw ScryptError.unknownError(code: result)
-        }
-
-        return rv
-    }
-}
-
-private extension BinaryInteger {
-    var isPowerOfTwo: Bool {
-        (self > 0) && (self & (self - 1) == 0)
-    }
-}
-
-func scrypt (password: String, salt: Data, length: Int, N: Int, R: Int, P: Int) -> Data? {
-    guard let passwordData = password.data(using: .utf8) else {
-        return nil
-    }
-
-    guard let result = try? Scrypt.calculate(password: passwordData.bytes, salt: salt.bytes, dkLen: length, N: N, r: R, p: P) else {
-        return nil
-    }
-
+func scrypt(password: String, salt: Data, length: Int, N: Int, R: Int, P: Int) -> Data? {
+    guard let passwordData = password.data(using: .utf8) else { return nil }
+    guard let deriver = try? Scrypt(password: passwordData.bytes, salt: salt.bytes, dkLen: length, N: N, r: R, p: P) else { return nil }
+    guard let result = try? deriver.calculate() else { return nil }
     return Data(result)
 }
 
 /// Convert the private key (32 bytes of Data) to compressed (33 bytes) or non-compressed (65 bytes) public key.
 func privateToPublic(_ privateKey: Data, compressed: Bool = false) -> Data? {
-    return SECP256K1.privateToPublic(privateKey: privateKey, compressed: compressed)
+    guard let publicKey = SECP256K1.privateToPublic(privateKey: privateKey, compressed: compressed) else { return nil }
+    return publicKey
 }
 
-/// Convert a public key to the corresponding EthereumAddress.
-/// Accepts public keys in compressed (33 bytes), non-compressed (65 bytes) or raw concat(X,Y) (64 bytes) format.
+/// Convert a public key to the corresponding ``EthereumAddress``. Accepts public keys in compressed (33 bytes), uncompressed (65 bytes)
+/// or uncompressed without prefix (64 bytes) format.
 ///
-/// Returns 20 bytes of address data.
+/// - Parameter publicKey: compressed 33, non-compressed (65 bytes) or non-compressed without prefix (64 bytes)
+/// - Returns: 20 bytes of address data.
 func publicToAddressData(_ publicKey: Data) -> Data? {
+    var publicKey = publicKey
     if publicKey.count == 33 {
-        guard let decompressedKey = SECP256K1.combineSerializedPublicKeys(keys: [publicKey], outputCompressed: false) else {
+        guard
+            (publicKey[0] == 2 || publicKey[0] == 3),
+            let decompressedKey = SECP256K1.combineSerializedPublicKeys(keys: [publicKey], outputCompressed: false)
+        else {
             return nil
         }
-
-        return publicToAddressData(decompressedKey)
+        publicKey = decompressedKey
     }
 
-    var stipped = publicKey
-    if (stipped.count == 65) {
-        if (stipped[0] != 4) {
+    if publicKey.count == 65 {
+        guard publicKey[0] == 4 else {
             return nil
         }
-        stipped = stipped[1...64]
-    }
-
-    if (stipped.count != 64) {
+        publicKey = publicKey[1...64]
+    } else if publicKey.count != 64 {
         return nil
     }
-
-    let sha3 = stipped.sha3(.keccak256)
-    return sha3[12...31]
+    let sha3 = publicKey.sha3(.keccak256)
+    let addressData = sha3[12...31]
+    return addressData
 }
 
-/// Convert a public key to the corresponding EthereumAddress.
-/// Accepts public keys in compressed (33 bytes), non-compressed (65 bytes) or raw concat(X,Y) (64 bytes) format.
+/// Convert a public key to the corresponding ``EthereumAddress``. Accepts public keys in compressed (33 bytes), uncompressed (65 bytes)
+/// or uncompressed without prefix (64 bytes) format.
 ///
-/// Returns the EthereumAddress object.
+/// - Parameter publicKey: compressed 33, non-compressed (65 bytes) or non-compressed without prefix (64 bytes)
+/// - Returns: `EthereumAddress` object.
 func publicToAddress(_ publicKey: Data) -> EthereumAddress? {
-    guard let addressData = publicToAddressData(publicKey) else {
-        return nil
-    }
-
+    guard let addressData = publicToAddressData(publicKey) else { return nil }
     let address = addressData.toHexString().addHexPrefix().lowercased()
     return EthereumAddress(address)
+}
+
+/// Convert a public key to the corresponding ``EthereumAddress``. Accepts public keys in compressed (33 bytes), uncompressed (65 bytes)
+/// or uncompressed without prefix (64 bytes) format.
+///
+/// - Parameter publicKey: compressed 33, non-compressed (65 bytes) or non-compressed without prefix (64 bytes)
+/// - Returns: `0x` prefixed hex string.
+func publicToAddressString(_ publicKey: Data) -> String? {
+    guard let addressData = publicToAddressData(publicKey) else { return nil }
+    let address = addressData.toHexString().addHexPrefix().lowercased()
+    return address
 }

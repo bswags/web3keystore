@@ -199,16 +199,6 @@ final class web3keystoreTests: XCTestCase {
         XCTAssert(keystore?.addresses![1] == recreatedStore?.addresses![1])
     }
 
-    func testPBKDF2() throws {
-        let pass = "passDATAb00AB7YxDTTl".data(using: .utf8)!
-        let salt = "saltKEYbcTcXHCBxtjD2".data(using: .utf8)!
-
-        let dataArray = try? PBKDF2.calculate(password: pass.bytes, salt: salt.bytes, iterations: 100000, keyLength: 65, variant: .sha512)
-        let res =
-            "0x594256B0BD4D6C9F21A87F7BA5772A791A10E6110694F44365CD94670E57F1AECD797EF1D1001938719044C7F018026697845EB9AD97D97DE36AB8786AAB5096E7"
-        XCTAssert(Data(dataArray!).toHexString().addHexPrefix().lowercased() == res.lowercased())
-    }
-
     func testRIPEMD() throws {
         let data = "message digest".data(using: .ascii)
         let hash = try! RIPEMD160.hash(message: data!)

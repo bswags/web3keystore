@@ -26,26 +26,26 @@ public struct IBAN {
     }
 
     public var checksum: String {
-        return self.iban[2..<4];
+        return self.iban[2..<4]
     }
 
     public var asset: String {
-        if (self.isIndirect) {
+        if self.isIndirect {
             return self.iban[4..<7]
         } else {
             return ""
         }
     }
 
-    public var institution : String {
-        if (self.isIndirect) {
+    public var institution: String {
+        if self.isIndirect {
             return self.iban[7..<11]
         } else {
             return ""
         }
     }
 
-    public var client : String {
+    public var client: String {
         if self.isIndirect {
             return self.iban[11...]
         } else {
@@ -55,7 +55,7 @@ public struct IBAN {
 
     public func toEthereumAddress() -> EthereumAddress? {
         if self.isDirect {
-            let base36 = self.iban[4...];
+            let base36 = self.iban[4...]
             guard let asBigNumber = BigUInt(base36, radix: 36) else {return  nil}
             let addressString = String(asBigNumber, radix: 16).leftPadding(toLength: 40, withPad: "0")
             return EthereumAddress(addressString.addHexPrefix())
@@ -66,9 +66,9 @@ public struct IBAN {
 
     internal static func decodeToInts(_ iban: String) -> String {
         let uppercasedIBAN = iban.replacingOccurrences(of: " ", with: "").uppercased()
-        let begining = String(uppercasedIBAN[0..<4])
+        let beginning = String(uppercasedIBAN[0..<4])
         let end = String(uppercasedIBAN[4...])
-        let IBAN = end + begining
+        let IBAN = end + beginning
         var arrayOfInts = [Int]()
         for ch in IBAN {
             guard let dataPoint = String(ch).data(using: .ascii) else {return ""}
@@ -80,7 +80,7 @@ public struct IBAN {
                 arrayOfInts.append(code - 48)
             }
         }
-        let joinedString = arrayOfInts.map({ (intCh) -> String in
+        let joinedString = arrayOfInts.map({ intCh -> String in
             return String(intCh)
         }).joined()
         return joinedString
@@ -103,7 +103,7 @@ public struct IBAN {
         guard match.count == 1 else {
             return false
         }
-        if (iban.hasPrefix("XE") && !noValidityCheck) {
+        if iban.hasPrefix("XE") && !noValidityCheck {
             let remainder = calculateChecksumMod97(decodeToInts(iban))
             return remainder == 1
         } else {
@@ -113,18 +113,18 @@ public struct IBAN {
 
     public init?(_ ibanString: String) {
         let matched = ibanString.replacingOccurrences(of: " ", with: "").uppercased()
-        guard IBAN.isValidIBANaddress(matched) else {return nil}
+        guard IBAN.isValidIBANaddress(matched) else { return nil }
         self.iban = matched
     }
 
     public init?(_ address: EthereumAddress) {
         let addressString = address.address.lowercased().stripHexPrefix()
-        guard let bigNumber = BigUInt(addressString, radix: 16) else {return nil}
-        let base36EncodedString = String(bigNumber, radix: 36);
-        guard base36EncodedString.count <= 30 else {return nil}
+        guard let bigNumber = BigUInt(addressString, radix: 16) else { return nil }
+        let base36EncodedString = String(bigNumber, radix: 36)
+        guard base36EncodedString.count <= 30 else { return nil }
         let padded = base36EncodedString.leftPadding(toLength: 30, withPad: "0")
         let prefix = "XE"
-        let remainder = IBAN.calculateChecksumMod97(IBAN.decodeToInts(prefix + "00" + padded));
+        let remainder = IBAN.calculateChecksumMod97(IBAN.decodeToInts(prefix + "00" + padded))
         let checkDigits = "0" + String(98 - remainder)
         let twoDigits = checkDigits[checkDigits.count-2..<checkDigits.count]
         let fullIban = prefix + twoDigits + padded

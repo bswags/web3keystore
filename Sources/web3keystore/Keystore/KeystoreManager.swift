@@ -44,9 +44,11 @@ public class KeystoreManager: AbstractKeystore {
     }
 
     public func UNSAFE_getPrivateKeyData(password: String, account: EthereumAddress) throws -> Data {
-        guard let keystore = self.walletForAddress(account) else {throw AbstractKeystoreError.invalidAccountError}
-                    return try keystore.UNSAFE_getPrivateKeyData(password: password, account: account)
-                }
+        guard let keystore = walletForAddress(account) else {
+            throw AbstractKeystoreError.invalidAccountError
+        }
+        return try keystore.UNSAFE_getPrivateKeyData(password: password, account: account)
+    }
 
     public static var allManagers = [KeystoreManager]()
     public static var defaultManager: KeystoreManager? {
@@ -136,32 +138,32 @@ public class KeystoreManager: AbstractKeystore {
     }
 
     private init?(_ path: String, scanForHDwallets: Bool = false, suffix: String? = nil) throws {
-        if (scanForHDwallets) {
+        if scanForHDwallets {
             self.isHDKeystore = true
         }
         self.path = path
         let fileManager = FileManager.default
         var isDir: ObjCBool = false
         var exists = fileManager.fileExists(atPath: path, isDirectory: &isDir)
-        if (!exists && !isDir.boolValue) {
+        if !exists && !isDir.boolValue {
             try fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
             exists = fileManager.fileExists(atPath: path, isDirectory: &isDir)
         }
-        if (!isDir.boolValue) {
+        if !isDir.boolValue {
             return nil
         }
         let allFiles = try fileManager.contentsOfDirectory(atPath: path)
-        if (suffix != nil) {
+        if suffix != nil {
             for file in allFiles where file.hasSuffix(suffix!) {
                 var filePath = path
-                if (!path.hasSuffix("/")) {
+                if !path.hasSuffix("/") {
                     filePath = path + "/"
                 }
                 filePath = filePath + file
                 guard let content = fileManager.contents(atPath: filePath) else {
                     continue
                 }
-                if (!scanForHDwallets) {
+                if !scanForHDwallets {
                     guard let keystore = EthereumKeystoreV3(content) else {
                         continue
                     }
@@ -176,14 +178,14 @@ public class KeystoreManager: AbstractKeystore {
         } else {
             for file in allFiles {
                 var filePath = path
-                if (!path.hasSuffix("/")) {
+                if !path.hasSuffix("/") {
                     filePath = path + "/"
                 }
                 filePath = filePath + file
                 guard let content = fileManager.contents(atPath: filePath) else {
                     continue
                 }
-                if (!scanForHDwallets) {
+                if !scanForHDwallets {
                     guard let keystore = EthereumKeystoreV3(content) else {
                         continue
                     }

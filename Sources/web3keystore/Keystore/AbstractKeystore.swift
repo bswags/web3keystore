@@ -14,7 +14,7 @@ public protocol AbstractKeystore {
     func UNSAFE_getPrivateKeyData(password: String, account: EthereumAddress) throws -> Data
 }
 
-public enum AbstractKeystoreError: LocalizedError {
+public enum AbstractKeystoreError: Error {
     case aesError
     case noEntropyError
     case keyDerivationError
